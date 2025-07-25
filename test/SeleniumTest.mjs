@@ -138,8 +138,6 @@ console.log(`Server URL: ${serverUrl}`);
     );
     await logoutButton.click();
 
-    // **FIX APPLIED**: Wait for a reliable element on the home page (the login form)
-    // instead of checking for a specific URL. This is more robust.
     const loginForm = await driver.wait(
       until.elementLocated(By.css('form[action="/login"]')),
       5000
@@ -218,8 +216,6 @@ console.log(`Server URL: ${serverUrl}`);
     );
     await returnButton.click();
 
-    // **FIX APPLIED**: Wait for a reliable element on the home page (the search button)
-    // instead of checking for a specific URL. This fixes the TimeoutError.
     await driver.wait(until.elementLocated(By.id('search-button')), 5000);
     const title = await driver.getTitle();
     assert.strictEqual(
@@ -227,10 +223,16 @@ console.log(`Server URL: ${serverUrl}`);
       'Login and Search',
       'Test 2 Failed: Did not return to the correct home page title.'
     );
+
+    // **FIX APPLIED**: The previous check was too strict. This new check uses the
+    // URL object to parse the current URL and verify that the path is the root ('/'),
+    // which correctly handles cases like 'http://host/?'.
     const currentUrl = await driver.getCurrentUrl();
-    assert.ok(
-      currentUrl.endsWith('/'),
-      `Test 2 Failed: URL should be the root. Got: ${currentUrl}`
+    const parsedUrl = new URL(currentUrl);
+    assert.strictEqual(
+      parsedUrl.pathname,
+      '/',
+      `Test 2 Failed: URL path should be the root '/'. Got: ${parsedUrl.pathname}`
     );
     console.log('✅ Test 2 (Return from results) passed');
 
