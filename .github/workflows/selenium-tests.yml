@@ -8,7 +8,6 @@ on:
     branches:
       - main
 
-# This permissions block is required to allow the workflow to write security alerts.
 permissions:
   contents: read
   security-events: write
@@ -141,7 +140,20 @@ jobs:
       - name: Run ESLint Scan
         run: npm run lint || true
 
+      # FIX: Add a step to check if the SARIF file exists before trying to upload it.
+      - name: Check for SARIF file existence
+        id: check_sarif
+        run: |
+          if [ -f "eslint-results.sarif" ]; then
+            echo "sarif_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "SARIF file not found. Skipping upload."
+            echo "sarif_exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Upload SARIF file
+        # This step will only run if the previous step set sarif_exists to 'true'
+        if: steps.check_sarif.outputs.sarif_exists == 'true'
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: eslint-results.sarif
