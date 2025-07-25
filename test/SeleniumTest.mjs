@@ -1,3 +1,5 @@
+// tests/SeleniumTest.mjs
+
 import { Builder, By, until } from 'selenium-webdriver';
 import assert from 'assert';
 
@@ -6,68 +8,49 @@ const environment = process.argv[2] || 'local';
 
 // URLs based on environment
 // Obtain dev selenium server IP using: docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' selenium-server
-const seleniumUrl = environment === 'github' 
-  ? 'http://selenium:4444/wd/hub' 
+const seleniumUrl = environment === 'github'
+  ? 'http://selenium:4444/wd/hub'
   : 'http://localhost:4444/wd/hub';
 
-// Note: Start the nodejs server before running the test locally
-const serverUrl = environment === 'github' 
-  ? 'http://testserver:3000' 
+const serverUrl = environment === 'github'
+  ? 'http://testserver:3000'
   : 'http://host.docker.internal:3000';
-
 
 console.log(`Running tests in '${environment}' environment`);
 console.log(`Selenium URL: ${seleniumUrl}`);
 console.log(`Server URL: ${serverUrl}`);
 
-(async function testTimestamp() {
+(async function testLogin() {
+  // Initialize the WebDriver with Chrome
+  const driver = await new Builder()
+    .forBrowser('chrome')
+    .usingServer(seleniumUrl)
+    .build();
 
-    console.log("before driver init")
+  try {
+    console.log('→ Navigating to login page');
+    await driver.get(`${serverUrl}/login`);
 
-    // Initialize the WebDriver with Chrome
-    const driver = environment === 'github' 
-        ? await new Builder()
-        .forBrowser('chrome')
-        .usingServer(seleniumUrl) // Specify the Selenium server
-        .build()
-        : await new Builder()
-        .forBrowser('chrome')
-        .usingServer(seleniumUrl) // Specify the Selenium server
-        .build();
+    // Locate the form fields and button
+    const emailInput    = await driver.wait(until.elementLocated(By.id('email')), 5000);
+    const passwordInput = await driver.findElement(By.id('password'));
+    const loginButton   = await driver.findElement(By.id('login-button'));
 
+    // Fill in valid credentials
+    await emailInput.sendKeys('test@example.com');
+    await passwordInput.sendKeys('password123');
+    await loginButton.click();
 
-    try {
+    // Wait for the feedback message and verify it
+    const messageEl   = await driver.wait(until.elementLocated(By.id('message')), 5000);
+    const messageText = await messageEl.getText();
+    assert.strictEqual(messageText, 'Login successful!');
 
-        console.log("after driver init")
-        
-        await driver.get(serverUrl);
-
-        console.log("after driver.get serverUrl")
-
-        // Wait for the timestamp to appear on the page
-        let timestampElement = await driver.wait(
-            until.elementLocated(By.id('timestamp')), // Assuming the timestamp has an id of 'timestamp'
-            5000 // Timeout in milliseconds
-        );
-
-        // Get the timestamp text
-        let timestampText = await timestampElement.getText();
-        console.log(`Timestamp: ${timestampText}`);
-
-        // Extract the actual timestamp after "Server timestamp: "
-        const timestampMatch = timestampText.match(/Server timestamp:\s*(.*)/);
-        assert.ok(timestampMatch, 'Timestamp text does not match expected format');
-        const extractedTimestamp = timestampMatch[1];
-
-        // Validate the timestamp format (ISO 8601 format)
-        const timestampRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-        assert.match(extractedTimestamp, timestampRegex, 'Timestamp format is invalid');
-        console.log('Timestamp format is valid.');
-
-    } catch (err) {
-        console.error('Test failed:', err);
-    } finally {
-        // Quit the browser session
-        await driver.quit();
-    }
+    console.log('✅ Login test passed');
+  } catch (err) {
+    console.error('❌ Login test failed:', err);
+    process.exit(1);
+  } finally {
+    await driver.quit();
+  }
 })();

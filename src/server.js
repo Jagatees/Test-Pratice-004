@@ -12,6 +12,50 @@ export function getCurrentTimestamp() {
   return new Date().toISOString();
 }
 
+
+// Serve a simple login page
+app.get('/login', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Login</title>
+    </head>
+    <body>
+      <h1>Login</h1>
+      <form id="login-form">
+        <label>
+          Email:
+          <input type="email" id="email" name="email" />
+        </label><br/><br/>
+        <label>
+          Password:
+          <input type="password" id="password" name="password" />
+        </label><br/><br/>
+        <button type="submit" id="login-button">Login</button>
+      </form>
+      <p id="message" style="color: green;"></p>
+      <script>
+        document.getElementById('login-form').addEventListener('submit', e => {
+          e.preventDefault();
+          const email = document.getElementById('email').value;
+          const pass  = document.getElementById('password').value;
+          // very basic “authentication”
+          if (email === 'test@example.com' && pass === 'password123') {
+            document.getElementById('message').textContent = 'Login successful!';
+          } else {
+            document.getElementById('message').textContent = 'Invalid credentials';
+          }
+        });
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+
 // Serve a simple HTML page
 app.get('/', (req, res) => {
   res.send(`
