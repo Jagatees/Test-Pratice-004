@@ -71,6 +71,15 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # --- ADD THIS STEP TO DEBUG THE FILE PATH ---
+      - name: List files in src directory
+        run: |
+          echo "Listing files in $(pwd)/src:"
+          ls -l src/
+          echo "Listing files in $(pwd):"
+          ls -l .
+      # ---------------------------------------------
+
       - name: List node_modules
         run: ls -l node_modules
 
