@@ -3,11 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test": "mocha",
-    "test:unit": "mocha tests/test.js",
-    "test:selenium:timestamp": "node tests/SeleniumTest.mjs",
-    "test:selenium:login": "node tests/SeleniumLoginTest.mjs",
-    "start": "node src/server.js"
+    "test": "mocha"
   },
   "devDependencies": {
     "@microsoft/eslint-formatter-sarif": "^3.1.0",

@@ -11,12 +11,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      # Consider caching node_modules only if it actually saves time reliably
-      # on subsequent runs. For small projects, `npm install` might be fast enough.
       - name: Cache Node.js modules
         uses: actions/cache@v4
         with:
@@ -24,18 +23,13 @@ jobs:
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
           restore-keys: ${{ runner.os }}-node-modules
 
-      - name: Install Node.js dependencies (for build job if needed, e.g., linting)
+      - name: Install Node.js dependencies
         run: npm install
-
-      - name: List files for debugging (build job root)
-        run: ls -lR
 
       - name: Prepare artifacts
         run: |
-          # INCLUDE THE 'data' DIRECTORY HERE!
-          # Make sure the 'data' directory is at the root level of your project
-          tar -czvf www-build.tar.gz ./package.json ./src ./tests ./data
-          ls -l www-build.tar.gz
+          tar -czvf www-build.tar.gz ./package.json ./src/server.js test
+          ls -l
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -54,22 +48,13 @@ jobs:
 
     env:
       TEST_BASE_URL: http://testserver:3000
-      # Change SELENIUM_HOST to just the base URL,
-      # the client (SeleniumTest.mjs) will append /wd/hub
-      SELENIUM_HOST: http://selenium:4444
+      SELENIUM_HOST: http://selenium:4444/wd/hub
 
     services:
       selenium:
-        image: selenium/standalone-chrome:latest # Use a specific version for stability, e.g., selenium/standalone-chrome:126.0
+        image: selenium/standalone-chrome
         ports:
           - 4444:4444
-        options: >-
-          --shm-size=2gb # Recommended for Chrome in Docker
-          # Health check for Selenium Grid 4.x
-          --health-cmd="curl -f http://localhost:4444/status || exit 1"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=10
 
     steps:
       - name: Download built files
@@ -81,17 +66,15 @@ jobs:
       - name: Extract artifacts
         run: |
           tar -xzvf www-build.tar.gz
-          # After extraction, files will be in their original paths relative to the tarball's root
-          # e.g., ./src, ./tests, ./data, ./package.json
-          ls -lR
+          ls -l
 
-      - name: Install dependencies (inside the container)
+      - name: Install dependencies
         run: npm install
 
-      - name: List node_modules (debugging)
+      - name: List node_modules
         run: ls -l node_modules
 
-      - name: List files for debugging (inside test container)
+      - name: List files for debugging
         run: |
           echo "Current directory:"
           pwd
@@ -99,58 +82,27 @@ jobs:
           ls -ltra .
           echo "Files in the src directory:"
           ls -ltra src/
-          echo "Files in the tests directory:"
-          ls -ltra tests/ # Corrected from 'test/' to 'tests/' as per your structure
-          echo "Files in the data directory:"
-          ls -ltra data/ # Verify data directory exists and has the file
+          echo "Files in the test directory:"
+          ls -ltra test/
 
       - name: Run unit tests
-        run: npm test # This will run both unit and selenium tests if package.json has "mocha" for "test" script
+        run: npm test
 
       - name: Start Node.js server
         run: |
-          nohup node src/server.js & # Start the server in the background
-          echo "Server process started."
-          # Give the server some time to start, but mainly rely on the curl check below
-          sleep 5
+          nohup node src/server.js &  # Start the server in the background
+          sleep 5  # Give the server some time to start
 
-      - name: Verify Node.js server is running
+      - name: Verify server is running
         run: |
-          echo "Waiting for Node.js server at http://localhost:3000..."
-          for i in {1..10}; do
-            curl -f http://localhost:3000 && break # Check for successful HTTP response
-            echo "Waiting for server... attempt $((i+1))"
-            sleep 2
-          done
           curl -f http://localhost:3000 || { echo "Server failed to start"; exit 1; }
-          echo "Node.js server is up and running."
 
-
-      - name: Wait for Selenium server to be up and healthy
-        # Use the /status endpoint for health check.
-        # This checks the internal health of the Selenium Grid (Hub or Standalone).
+      - name: Wait for Selenium server to be up
         run: |
-          echo "Waiting for Selenium server at ${{ env.SELENIUM_HOST }}/status..."
-          for i in {1..15}; do # Increased retries and wait for Selenium
-            # Check the /status endpoint and grep for "ready: true" if it's a newer Grid version
-            # Or just check for any successful response from /status
-            if curl -sS "${{ env.SELENIUM_HOST }}/status" | grep -q '"ready": true'; then
-              echo "Selenium server is ready."
-              break
-            else
-              echo "Waiting for Selenium server... attempt $((i+1))"
-              sleep 5 # Wait longer for Selenium to spin up
-            fi
-            if [ $i -eq 15 ]; then
-              echo "Selenium server did not become ready within timeout."
-              exit 1
-            fi
+          for i in {1..10}; do
+            curl -s $SELENIUM_HOST && break || sleep 3
           done
 
-      - name: Run Selenium E2E tests (Login flow)
-        # Use 'test/SeleniumLoginTest.mjs' as the new test file
-        run: node tests/SeleniumLoginTest.mjs github
+      - name: Run Selenium tests
+        run: node test/SeleniumTest.mjs github
 
-      - name: Run Selenium E2E tests (Timestamp)
-        # Assuming you still have your original timestamp test
-        run: node tests/SeleniumTest.mjs github
