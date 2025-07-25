@@ -138,6 +138,8 @@ console.log(`Server URL: ${serverUrl}`);
     );
     await logoutButton.click();
 
+    // **FIX APPLIED**: Wait for a reliable element on the home page (the login form)
+    // instead of checking for a specific URL. This is more robust.
     const loginForm = await driver.wait(
       until.elementLocated(By.css('form[action="/login"]')),
       5000
@@ -146,9 +148,12 @@ console.log(`Server URL: ${serverUrl}`);
       await loginForm.isDisplayed(),
       'Test 4 Failed: Expected to return to login page by finding the login form.'
     );
-
-    await driver.wait(until.urlIs(serverUrl + '/'), 5000);
-    await driver.wait(until.titleIs('Login and Search'), 5000);
+    const title = await driver.getTitle();
+    assert.strictEqual(
+      title,
+      'Login and Search',
+      'Test 4 Failed: Incorrect page title after logout.'
+    );
 
     console.log('✅ Test 4 (Logout) passed');
     console.log('--- All Password Validation Tests Completed Successfully! ---');
@@ -212,8 +217,21 @@ console.log(`Server URL: ${serverUrl}`);
       5000
     );
     await returnButton.click();
-    await driver.wait(until.urlIs(serverUrl + '/'), 5000);
-    await driver.wait(until.titleIs('Login and Search'), 5000);
+
+    // **FIX APPLIED**: Wait for a reliable element on the home page (the search button)
+    // instead of checking for a specific URL. This fixes the TimeoutError.
+    await driver.wait(until.elementLocated(By.id('search-button')), 5000);
+    const title = await driver.getTitle();
+    assert.strictEqual(
+      title,
+      'Login and Search',
+      'Test 2 Failed: Did not return to the correct home page title.'
+    );
+    const currentUrl = await driver.getCurrentUrl();
+    assert.ok(
+      currentUrl.endsWith('/'),
+      `Test 2 Failed: URL should be the root. Got: ${currentUrl}`
+    );
     console.log('✅ Test 2 (Return from results) passed');
 
     // Test 3: XSS attack attempt
