@@ -1,0 +1,37 @@
+name: OWASP Dependency Check
+
+on: [push, pull_request]
+
+jobs:
+  dependency-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run OWASP Dependency Check via Docker
+        run: |
+          docker run --rm \
+            -v "$(pwd):/src" \
+            -v "$(pwd)/odc-reports:/report" \
+            -v "$(pwd)/odc-data:/usr/share/dependency-check/data" \
+            owasp/dependency-check \
+            --scan /src \
+            --format "HTML" \
+            --out /report \
+            --nvdApiKey 934b37fa-7f5d-41a1-9c3a-a7c11e930e4e
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dependency-Check-Report
+          path: odc-reports/dependency-check-report.html
