@@ -10,40 +10,6 @@ const __dirname = path.dirname(__filename);
 
 app.use(express.urlencoded({ extended: true }));
 
-// REMOVED: The commonPasswords set and file loading logic are gone.
-
-function verifyPassword(password) {
-  const minLength = 12;
-  let score = 0;
-  let feedback = [];
-
-  if (password.length < minLength) {
-    feedback.push(`Password must be at least ${minLength} characters long.`);
-  }
-
-  const hasLowercase = /[a-z]/.test(password);
-  const hasUppercase = /[A-Z]/.test(password);
-  const hasNumber = /[0-9]/.test(password);
-  const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password);
-
-  if (hasLowercase) score++;
-  if (hasUppercase) score++;
-  if (hasNumber) score++;
-  if (hasSpecial) score++;
-
-  if (score < 3) {
-    feedback.push(
-      'Password must contain at least 3 of the following: lowercase, uppercase, numbers, special characters.'
-    );
-  }
-
-  // REMOVED: The check against the common passwords list is gone.
-
-  const isValid = feedback.length === 0;
-
-  return { isValid, feedback };
-}
-
 /**
  * Validates a search term against XSS and SQL Injection patterns.
  * @param {string} term The search term to validate.
@@ -84,18 +50,7 @@ function escapeHTML(str) {
     .replace(/'/g, '&#039;');
 }
 
-app.get('/timestamp', (req, res) => {
-  res.json({ timestamp: getCurrentTimestamp() });
-});
-
-export function getCurrentTimestamp() {
-  return new Date().toISOString();
-}
-
 app.get('/', (req, res) => {
-  const errorMessage = req.query.error_message
-    ? decodeURIComponent(req.query.error_message)
-    : '';
   const searchError = req.query.search_error
     ? decodeURIComponent(req.query.search_error)
     : '';
@@ -106,54 +61,25 @@ app.get('/', (req, res) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Login and Search</title>
+      <title>Search</title>
       <style>
         body { font-family: sans-serif; margin: 2em; }
         .error { color: red; }
-        .success { color: green; }
-        .container { margin-bottom: 2em; padding-bottom: 1em; border-bottom: 1px solid #ccc; }
       </style>
     </head>
     <body>
-      <div class="container">
-        <h1>Search</h1>
-        <form action="/search" method="POST">
-          <label>
-            Search Term:
-            <input type="text" id="search-term" name="searchTerm" required />
-          </label><br/><br/>
-          <button type="submit" id="search-button">Search</button>
-        </form>
-        ${searchError ? `<p class="error">${searchError}</p>` : ''}
-      </div>
-
-      <div class="container">
-        <h1>Login</h1>
-        <form action="/login" method="POST">
-          <label>
-            Password:
-            <input type="password" id="password" name="password" required />
-          </label><br/><br/>
-          <button type="submit" id="login-button">Login</button>
-        </form>
-        ${errorMessage ? `<p class="error">${errorMessage}</p>` : ''}
-      </div>
+      <h1>Search</h1>
+      <form action="/search" method="POST">
+        <label>
+          Search Term:
+          <input type="text" id="search-term" name="searchTerm" required />
+        </label><br/><br/>
+        <button type="submit" id="search-button">Search</button>
+      </form>
+      ${searchError ? `<p class="error">${searchError}</p>` : ''}
     </body>
     </html>
   `);
-});
-
-app.post('/login', (req, res) => {
-  const password = req.body.password;
-  const { isValid, feedback } = verifyPassword(password);
-
-  if (isValid) {
-    res.redirect(`/welcome?password=${encodeURIComponent(password)}`);
-  } else {
-    res.redirect(
-      `/?error_message=${encodeURIComponent(feedback.join('<br/>'))}`
-    );
-  }
 });
 
 app.post('/search', (req, res) => {
@@ -192,62 +118,8 @@ app.get('/search-results', (req, res) => {
   `);
 });
 
-app.get('/welcome', (req, res) => {
-  const enteredPassword = req.query.password || 'N/A';
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Welcome</title>
-    </head>
-    <body>
-      <h1>Welcome!</h1>
-      <p>You entered a strong password.</p>
-      <p>Your password (for demonstration only): ${enteredPassword}</p>
-      <form action="/" method="GET">
-        <button type="submit">Logout</button>
-      </form>
-    </body>
-    </html>
-  `);
-});
-
-app.get('/browser-info', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Browser Info</title>
-    </head>
-    <body>
-      <h1>Browser and Timestamp Info</h1>
-      <p id="browser-info">Loading browser details...</p>
-      <p id="timestamp">Fetching server timestamp...</p>
-      <script>
-        const userAgent = navigator.userAgent;
-        document.getElementById('browser-info').textContent = 'Your browser: ' + userAgent;
-
-        fetch('/timestamp')
-          .then(response => response.json())
-          .then(data => {
-            document.getElementById('timestamp').textContent = 'Server timestamp: ' + data.timestamp;
-          })
-          .catch(err => {
-            document.getElementById('timestamp').textContent = 'Error fetching timestamp';
-          });
-      </script>
-    </body>
-    </html>
-  `);
-});
-
 const server = app.listen(PORT, '0.0.0.0', () => {
-  // REMOVED: No longer need to load passwords on startup.
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
-export { server, verifyPassword };
+export { server };
