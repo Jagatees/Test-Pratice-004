@@ -6,14 +6,11 @@ import { fileURLToPath } from 'url';
 const app = express();
 const PORT = 3000;
 
-// __dirname equivalent for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Middleware to parse URL-encoded bodies (for form data)
 app.use(express.urlencoded({ extended: true }));
 
-// --- Password Validation ---
 let commonPasswords = new Set();
 const COMMON_PASSWORDS_FILE = path.join(
   __dirname,
@@ -34,16 +31,10 @@ async function loadCommonPasswords() {
     );
   } catch (err) {
     console.error(`Error loading common passwords file: ${err.message}`);
-    // Exit if the common password list cannot be loaded, as it's a critical security control.
-    // In a production environment, you might have a fallback or alert system.
     process.exit(1);
   }
 }
 
-// OWASP Top 10 Proactive Controls C6: Implement Digital Identity - Level 1: Password Requirements
-// - Minimum length of 12 characters.
-// - Requires at least 3 out of 4 character types: uppercase letters, lowercase letters, numbers, and special characters.
-// - Not found in a list of common/compromised passwords.
 function verifyPassword(password) {
   const minLength = 12;
   let score = 0;
@@ -63,7 +54,7 @@ function verifyPassword(password) {
   if (hasNumber) score++;
   if (hasSpecial) score++;
 
-  if (score < 3) {
+  if (score < 3) { // This condition is true for 'abc'
     feedback.push(
       'Password must contain at least 3 of the following: lowercase, uppercase, numbers, special characters.'
     );
@@ -75,25 +66,22 @@ function verifyPassword(password) {
     );
   }
 
-  // If there's any feedback, the password failed at least one requirement
   const isValid = feedback.length === 0;
 
   return { isValid, feedback };
 }
-// --- End Password Validation ---
 
-// Endpoint to return the current timestamp
 app.get('/timestamp', (req, res) => {
   res.json({ timestamp: getCurrentTimestamp() });
 });
 
-// Helper function to get the current timestamp
 export function getCurrentTimestamp() {
   return new Date().toISOString();
 }
 
-// Serve the default home page with the password form
 app.get('/', (req, res) => {
+  // Use 'error_message' as query parameter for clarity
+  const errorMessage = req.query.error_message ? decodeURIComponent(req.query.error_message) : '';
   res.send(`
     <!DOCTYPE html>
     <html lang="en">
@@ -113,15 +101,14 @@ app.get('/', (req, res) => {
           Password:
           <input type="password" id="password" name="password" required />
         </label><br/><br/>
-        <button type="submit" id="login-button">Login</button> <!-- ADDED ID HERE -->
+        <button type="submit" id="login-button">Login</button>
       </form>
-      ${req.query.message ? `<p class="error">${req.query.message}</p>` : ''}
+      ${errorMessage ? `<p class="error">${errorMessage}</p>` : ''} <!-- Display HTML directly -->
     </body>
     </html>
   `);
 });
 
-// Handle password submission
 app.post('/login', (req, res) => {
   const password = req.body.password;
   const { isValid, feedback } = verifyPassword(password);
@@ -129,11 +116,12 @@ app.post('/login', (req, res) => {
   if (isValid) {
     res.redirect(`/welcome?password=${encodeURIComponent(password)}`);
   } else {
-    res.redirect(`/?message=${encodeURIComponent(feedback.join(' '))}`);
+    // MODIFIED: Join feedback messages with <br/> for distinct lines in HTML
+    // and use 'error_message' query parameter
+    res.redirect(`/?error_message=${encodeURIComponent(feedback.join('<br/>'))}`);
   }
 });
 
-// Welcome page
 app.get('/welcome', (req, res) => {
   const enteredPassword = req.query.password || 'N/A';
   res.send(`
@@ -156,7 +144,6 @@ app.get('/welcome', (req, res) => {
   `);
 });
 
-// Serve a simple HTML page (original / route for browser info, now different from default home)
 app.get('/browser-info', (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -171,11 +158,9 @@ app.get('/browser-info', (req, res) => {
       <p id="browser-info">Loading browser details...</p>
       <p id="timestamp">Fetching server timestamp...</p>
       <script>
-        // Display browser information
         const userAgent = navigator.userAgent;
         document.getElementById('browser-info').textContent = 'Your browser: ' + userAgent;
 
-        // Fetch and display the server timestamp
         fetch('/timestamp')
           .then(response => response.json())
           .then(data => {
@@ -190,11 +175,9 @@ app.get('/browser-info', (req, res) => {
   `);
 });
 
-// Start the server
 const server = app.listen(PORT, '0.0.0.0', async () => {
-  await loadCommonPasswords(); // Load passwords before the server starts listening for requests
+  await loadCommonPasswords();
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
-// Export the server for tests
 export { server, verifyPassword };

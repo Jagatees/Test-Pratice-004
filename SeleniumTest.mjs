@@ -19,9 +19,7 @@ console.log(`Running tests in '${environment}' environment`);
 console.log(`Selenium URL: ${seleniumUrl}`);
 console.log(`Server URL: ${serverUrl}`);
 
-// This is the main test suite focusing on password validation and login flow.
 (async function testPasswordValidation() {
-  // Initialize the WebDriver with Chrome
   const driver = await new Builder()
     .forBrowser('chrome')
     .usingServer(seleniumUrl)
@@ -32,18 +30,14 @@ console.log(`Server URL: ${serverUrl}`);
 
     // Test 1: Invalid common password
     console.log('→ Navigating to login page for common password test');
-    // The server's root route '/' now serves the login page
     await driver.get(serverUrl);
 
-    // Locate the password input and login button
     let passwordInput = await driver.wait(until.elementLocated(By.id('password')), 5000);
     let loginButton   = await driver.wait(until.elementLocated(By.id('login-button')), 5000);
 
-    // Fill in a common password from the list (e.g., 'password')
-    await passwordInput.sendKeys('password'); // This is a very common password
+    await passwordInput.sendKeys('password');
     await loginButton.click();
 
-    // Wait for the error message and verify it
     let errorMessage = await driver.wait(until.elementLocated(By.css('p.error')), 5000);
     let errorMessageText = await errorMessage.getText();
     assert.ok(errorMessageText.includes('Password is too common or has been previously compromised.'),
@@ -52,20 +46,20 @@ console.log(`Server URL: ${serverUrl}`);
 
     // Test 2: Invalid password (not meeting complexity requirements)
     console.log('→ Navigating to login page for complexity test');
-    await driver.get(serverUrl); // Re-navigate to clear previous state and message
+    await driver.get(serverUrl);
 
     passwordInput = await driver.wait(until.elementLocated(By.id('password')), 5000);
     loginButton   = await driver.wait(until.elementLocated(By.id('login-button')), 5000);
 
-    // MODIFIED: This password ('abc') clearly fails minimum length (3 < 12)
-    // AND character types (only lowercase, score 1 < 3 of 4)
+    // Using 'abc' again. It should now trigger both the length and char type errors.
     await passwordInput.sendKeys('abc');
     await loginButton.click();
 
     errorMessage = await driver.wait(until.elementLocated(By.css('p.error')), 5000);
     errorMessageText = await errorMessage.getText();
     
-    // Now both assertions for length and character types should pass
+    // Now both assertions for length and character types should pass,
+    // as the message text should contain both due to '<br/>' in server.js
     assert.ok(errorMessageText.includes('Password must be at least 12 characters long.'),
       `Test 2 Failed: Expected min length error, got: "${errorMessageText}"`);
     assert.ok(errorMessageText.includes('Password must contain at least 3 of the following: lowercase, uppercase, numbers, special characters.'),
@@ -74,22 +68,19 @@ console.log(`Server URL: ${serverUrl}`);
 
     // Test 3: Valid password and successful login to welcome page
     console.log('→ Navigating to login page for valid password test');
-    await driver.get(serverUrl); // Re-navigate
+    await driver.get(serverUrl);
 
     passwordInput = await driver.wait(until.elementLocated(By.id('password')), 5000);
     loginButton   = await driver.wait(until.elementLocated(By.id('login-button')), 5000);
 
-    // This password is strong: >12 chars, lower, upper, number, special, and highly unique
     const validPassword = 'MySup3rS3cureP@ssw0rd!';
     await passwordInput.sendKeys(validPassword);
     await loginButton.click();
 
-    // Verify redirection to welcome page and content
     await driver.wait(until.urlContains('/welcome'), 5000);
     const welcomeHeader = await driver.wait(until.elementLocated(By.css('h1')), 5000);
     assert.strictEqual(await welcomeHeader.getText(), 'Welcome!', 'Test 3 Failed: Expected "Welcome!" header on welcome page');
     
-    // As per prompt: "displaying the password" on Welcome page (for demonstration)
     const passwordDisplayEl = await driver.wait(until.elementLocated(By.xpath(`//p[contains(text(),'${validPassword}')]`), 5000));
     assert.ok(await passwordDisplayEl.isDisplayed(), 'Test 3 Failed: Entered password is not displayed on welcome page');
 
@@ -97,11 +88,9 @@ console.log(`Server URL: ${serverUrl}`);
 
     // Test 4: Logout from welcome page
     console.log('→ Testing logout functionality');
-    // Find the logout button on the welcome page (it's within a form that submits to '/')
     const logoutButton = await driver.wait(until.elementLocated(By.css('form[action="/"] button[type="submit"]')), 5000);
     await logoutButton.click();
 
-    // Verify redirection back to the login page (root URL)
     await driver.wait(until.urlIs(serverUrl + '/'), 5000);
     const loginForm = await driver.wait(until.elementLocated(By.css('form[action="/login"]')), 5000);
     assert.ok(await loginForm.isDisplayed(), 'Test 4 Failed: Expected to return to login page after logout');
@@ -117,7 +106,6 @@ console.log(`Server URL: ${serverUrl}`);
   }
 })();
 
-// This is the separate test for the timestamp page, now correctly accessing /browser-info
 (async function testTimestampPage() {
   const driver = await new Builder()
     .forBrowser('chrome')
@@ -126,7 +114,6 @@ console.log(`Server URL: ${serverUrl}`);
 
   try {
     console.log("\n--- Starting Timestamp Page Test ---");
-    // Go to the specific endpoint for browser info and timestamp
     await driver.get(serverUrl + '/browser-info');
 
     let timestampElement = await driver.wait(
