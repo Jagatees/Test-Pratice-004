@@ -86,14 +86,21 @@ console.log(`Server URL: ${serverUrl}`);
 
     console.log('✅ Test 3 (Valid password & Welcome page) passed');
 
-    // Test 4: Logout from welcome page
+// Test 4: Logout from welcome page
     console.log('→ Testing logout functionality');
+    // Find the logout button on the welcome page
     const logoutButton = await driver.wait(until.elementLocated(By.css('form[action="/"] button[type="submit"]')), 5000);
     await logoutButton.click();
 
-    await driver.wait(until.urlIs(serverUrl + '/'), 5000);
+    // MODIFIED: Instead of until.urlIs, wait for a distinct element on the login page to appear.
+    // The login form itself (which has action="/login") is a good indicator.
     const loginForm = await driver.wait(until.elementLocated(By.css('form[action="/login"]')), 5000);
-    assert.ok(await loginForm.isDisplayed(), 'Test 4 Failed: Expected to return to login page after logout');
+    assert.ok(await loginForm.isDisplayed(), 'Test 4 Failed: Expected to return to login page after logout by finding the login form.');
+    
+    // Optionally, you can still check the URL for exactness *after* the element is located
+    // This makes the test more robust by ensuring the element is visible AND the URL is correct
+    await driver.wait(until.urlIs(serverUrl + '/'), 5000); // Keep this if you also want to confirm the URL is exact
+
     console.log('✅ Test 4 (Logout) passed');
 
     console.log('--- All Password Validation Tests Completed Successfully! ---');
