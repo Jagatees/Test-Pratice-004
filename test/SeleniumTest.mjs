@@ -224,16 +224,13 @@ console.log(`Server URL: ${serverUrl}`);
       'Test 2 Failed: Did not return to the correct home page title.'
     );
 
-    // **FIX APPLIED**: The previous check was too strict. This new check uses the
-    // URL object to parse the current URL and verify that the path is the root ('/'),
-    // which correctly handles cases like 'http://host/?'.
+    // **FIX APPLIED**: This check is now more robust. It explicitly checks if the
+    // current URL is one of the two valid root URLs, which handles the case
+    // where the URL ends with '/?'.
     const currentUrl = await driver.getCurrentUrl();
-    const parsedUrl = new URL(currentUrl);
-    assert.strictEqual(
-      parsedUrl.pathname,
-      '/',
-      `Test 2 Failed: URL path should be the root '/'. Got: ${parsedUrl.pathname}`
-    );
+    const isRootUrl =
+      currentUrl === `${serverUrl}/` || currentUrl === `${serverUrl}/?`;
+    assert.ok(isRootUrl, `Test 2 Failed: URL should be the root. Got: ${currentUrl}`);
     console.log('✅ Test 2 (Return from results) passed');
 
     // Test 3: XSS attack attempt
