@@ -294,6 +294,7 @@ console.log(`Server URL: ${serverUrl}`);
   }
 })();
 
+
 (async function testTimestampPage() {
   const driver = await new Builder()
     .forBrowser('chrome')
