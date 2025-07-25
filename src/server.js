@@ -84,10 +84,13 @@ export function verifySearchTerm(term) {
     return { isValid: false, attackType: 'xss' };
   }
 
-  // Basic SQL Injection check: block common SQL keywords and comment patterns.
-  const sqlPattern =
-    /\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|--|;|\/\*|\*\/)\b/i;
-  if (sqlPattern.test(term)) {
+  // **FIXED**: Split SQL injection check into two more specific patterns.
+  // Pattern for SQL keywords that should be whole words.
+  const sqlKeywordPattern = /\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION)\b/i;
+  // Pattern for SQL comment/terminator characters that can be anywhere.
+  const sqlCharPattern = /(--|;|\/\*|\*\/)/;
+
+  if (sqlKeywordPattern.test(term) || sqlCharPattern.test(term)) {
     return { isValid: false, attackType: 'sql' };
   }
 
