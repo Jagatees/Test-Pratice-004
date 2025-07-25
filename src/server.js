@@ -144,6 +144,7 @@ app.get('/welcome', (req, res) => {
   `);
 });
 
+
 app.get('/browser-info', (req, res) => {
   res.send(`
     <!DOCTYPE html>
