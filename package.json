@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test": "mocha"
+    "start-server": "node src/server.js",
+    "test-unit": "mocha tests/test.js",
+    "test-selenium-local": "node tests/SeleniumTest.mjs local",
+    "test-selenium-github": "node tests/SeleniumTest.mjs github",
+    "test": "npm run test-unit && npm run test-selenium-local",
+    "dev": "concurrently \"npm run start-server\" \"npm run test-selenium-local\""
   },
   "devDependencies": {
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
@@ -11,7 +16,8 @@
     "eslint": "^9.31.0",
     "eslint-plugin-security": "^3.0.1",
     "mocha": "^11.7.1",
-    "selenium-webdriver": "^4.34.0"
+    "selenium-webdriver": "^4.34.0",
+    "concurrently": "^8.2.2"  
   },
   "dependencies": {
     "express": "^5.1.0"
