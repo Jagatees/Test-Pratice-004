@@ -1,4 +1,4 @@
-name: Node.js Selenium Testing
+name: Node.js CI/CD Pipeline
 
 on:
   push:
@@ -14,15 +14,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4 # <-- Recommend v4 for latest features/bug fixes
+        uses: actions/checkout@v4
 
       - name: Cache Node.js modules
         uses: actions/cache@v4
         with:
           path: node_modules
-          # Changed 'v1' to 'v2' to force cache clear/rebuild.
-          # You can change this to 'v3', 'v4' etc. if you need to clear it again.
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}-v2 # <-- Bumped cache version
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}-v2
           restore-keys: |
             ${{ runner.os }}-node-modules-
 
@@ -31,9 +29,8 @@ jobs:
 
       - name: Prepare artifacts
         run: |
-          # --- MODIFIED LINE HERE ---
-          # Include the common passwords file and the entire src directory
-          tar -czvf www-build.tar.gz ./package.json ./src ./test 
+          # Package the source code and tests for the next job
+          tar -czvf www-build.tar.gz ./package.json ./src ./test
           ls -l
 
       - name: Upload artifacts
@@ -71,44 +68,20 @@ jobs:
       - name: Extract artifacts
         run: |
           tar -xzvf www-build.tar.gz
-          ls -l # To verify extraction at root level
+          ls -l
 
       - name: Install dependencies (inside container)
-        # Note: npm install here might be redundant if node_modules were packaged,
-        # but if you only package source, then this is needed for the container.
         run: npm install
 
-      # --- Keep these debug steps temporarily ---
-      - name: List files for debugging (container root)
-        run: |
-          echo "Current directory in container:"
-          pwd
-          echo "Files in the current directory (container root):"
-          ls -ltra .
-      
-      - name: List files in src directory (container)
-        run: |
-          echo "Files in src directory (container):"
-          ls -ltra src/
-      
-      - name: List files in test directory (container)
-        run: |
-          echo "Files in test directory (container):"
-          ls -ltra test/
-      # --- End debug steps ---
-
       - name: Run unit tests
-        # Assuming tests/test.js is your unit test file and it doesn't need the server
         run: npm test
 
       - name: Start Node.js server
         run: |
-          nohup node src/server.js &  # Start the server in the background
-          # Give the server more time to start, especially if loading the password file is large
-          sleep 10 # Increased sleep to 10 seconds for robustness
+          nohup node src/server.js &
+          sleep 10
 
       - name: Verify server is running
-        # Using curl to check server endpoint for actual content, not just connection
         run: |
           for i in {1..20}; do
             STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || echo "000")
@@ -126,7 +99,6 @@ jobs:
           done
 
       - name: Wait for Selenium server to be up
-        # Add a proper health check for Selenium Hub
         run: |
           echo "Waiting for Selenium Hub to be available on $SELENIUM_HOST/status"
           for i in {1..20}; do
@@ -142,5 +114,36 @@ jobs:
         if: always()
         run: |
           echo "Tests finished. Stopping background processes."
-          # If nohup created a process that doesn't exit, find and kill it
           pkill -f "node src/server.js" || true
+
+  security-scan:
+    name: ESLint Security Scan
+    runs-on: ubuntu-latest
+    needs: test # This job will only run if the 'test' job succeeds
+    permissions:
+      contents: read # for actions/checkout
+      security-events: write # for github/codeql-action/upload-sarif
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run ESLint Scan
+        # Run the lint script defined in package.json
+        # Use '|| true' to ensure the workflow continues even if issues are found,
+        # allowing the results to be uploaded.
+        run: npm run lint || true
+
+      - name: Upload SARIF file
+        # Uploads the results to GitHub's code scanning alerts
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: eslint-results.sarif

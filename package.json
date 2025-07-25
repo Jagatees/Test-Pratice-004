@@ -3,16 +3,17 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "lint": "eslint . --format @microsoft/eslint-formatter-sarif --output-file eslint-results.sarif"
   },
-   "devDependencies": {
+  "devDependencies": {
     "@microsoft/eslint-formatter-sarif": "^3.1.0",
     "chai": "^5.2.1",
     "eslint": "^9.31.0",
     "eslint-plugin-security": "^3.0.1",
     "mocha": "^11.7.1",
     "selenium-webdriver": "^4.34.0",
-    "concurrently": "^8.2.2"  
+    "concurrently": "^8.2.2"
   },
   "dependencies": {
     "express": "^5.1.0"
