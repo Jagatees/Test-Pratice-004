@@ -113,7 +113,7 @@ app.get('/', (req, res) => {
           Password:
           <input type="password" id="password" name="password" required />
         </label><br/><br/>
-        <button type="submit">Login</button>
+        <button type="submit" id="login-button">Login</button> <!-- ADDED ID HERE -->
       </form>
       ${req.query.message ? `<p class="error">${req.query.message}</p>` : ''}
     </body>
@@ -127,12 +127,8 @@ app.post('/login', (req, res) => {
   const { isValid, feedback } = verifyPassword(password);
 
   if (isValid) {
-    // In a real application, you would hash and store the password,
-    // then set a session or token and redirect.
-    // For this example, we just redirect to a welcome page.
     res.redirect(`/welcome?password=${encodeURIComponent(password)}`);
   } else {
-    // If password does not meet requirements, remain at the home page
     res.redirect(`/?message=${encodeURIComponent(feedback.join(' '))}`);
   }
 });
