@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # The Node.js Application Service
+  app:
+    # Build the image from the Dockerfile in the current directory
+    build: .
+    container_name: node-app
+    restart: unless-stopped
+    # Expose port 3000 only to other containers in the same network, not to the host machine
+    expose:
+      - '3000'
+
+  # The Nginx Reverse Proxy Service
+  nginx:
+    # Use the official stable-alpine Nginx image (it's small and secure)
+    image: nginx:stable-alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    # Map port 80 on the host machine to port 80 in the container.
+    # This is how you will access the application from your browser.
+    ports:
+      - '80:80'
+    # Mount our custom nginx.conf into the container
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    # Ensure the 'app' service is started before the 'nginx' service
+    depends_on:
+      - app
