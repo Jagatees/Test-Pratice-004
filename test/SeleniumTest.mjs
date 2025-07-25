@@ -28,8 +28,8 @@ console.log(`Server URL: ${serverUrl}`);
   try {
     console.log('--- Starting Password Validation Tests ---');
 
-    // Test 1: Invalid common password
-    console.log('→ Navigating to login page for common password test');
+    // Test 1: Invalid password (not meeting complexity requirements)
+    console.log('→ Navigating to login page for complexity test');
     await driver.get(serverUrl);
 
     let passwordInput = await driver.wait(
@@ -41,7 +41,7 @@ console.log(`Server URL: ${serverUrl}`);
       5000
     );
 
-    await passwordInput.sendKeys('password');
+    await passwordInput.sendKeys('abc');
     await loginButton.click();
 
     let errorMessage = await driver.wait(
@@ -49,49 +49,20 @@ console.log(`Server URL: ${serverUrl}`);
       5000
     );
     let errorMessageText = await errorMessage.getText();
-    assert.ok(
-      errorMessageText.includes(
-        'Password is too common or has been previously compromised.'
-      ),
-      `Test 1 Failed: Expected common password error, got: "${errorMessageText}"`
-    );
-    console.log('✅ Test 1 (Common password) passed');
-
-    // Test 2: Invalid password (not meeting complexity requirements)
-    console.log('→ Navigating to login page for complexity test');
-    await driver.get(serverUrl);
-
-    passwordInput = await driver.wait(
-      until.elementLocated(By.id('password')),
-      5000
-    );
-    loginButton = await driver.wait(
-      until.elementLocated(By.id('login-button')),
-      5000
-    );
-
-    await passwordInput.sendKeys('abc');
-    await loginButton.click();
-
-    errorMessage = await driver.wait(
-      until.elementLocated(By.css('p.error')),
-      5000
-    );
-    errorMessageText = await errorMessage.getText();
 
     assert.ok(
       errorMessageText.includes('Password must be at least 12 characters long.'),
-      `Test 2 Failed: Expected min length error, got: "${errorMessageText}"`
+      `Test 1 Failed: Expected min length error, got: "${errorMessageText}"`
     );
     assert.ok(
       errorMessageText.includes(
         'Password must contain at least 3 of the following'
       ),
-      `Test 2 Failed: Expected char type error, got: "${errorMessageText}"`
+      `Test 1 Failed: Expected char type error, got: "${errorMessageText}"`
     );
-    console.log('✅ Test 2 (Password complexity) passed');
+    console.log('✅ Test 1 (Password complexity) passed');
 
-    // Test 3: Valid password and successful login to welcome page
+    // Test 2: Valid password and successful login to welcome page
     console.log('→ Navigating to login page for valid password test');
     await driver.get(serverUrl);
 
@@ -116,7 +87,7 @@ console.log(`Server URL: ${serverUrl}`);
     assert.strictEqual(
       await welcomeHeader.getText(),
       'Welcome!',
-      'Test 3 Failed: Expected "Welcome!" header on welcome page'
+      'Test 2 Failed: Expected "Welcome!" header on welcome page'
     );
 
     const passwordDisplayEl = await driver.wait(
@@ -125,12 +96,12 @@ console.log(`Server URL: ${serverUrl}`);
     );
     assert.ok(
       await passwordDisplayEl.isDisplayed(),
-      'Test 3 Failed: Entered password is not displayed on welcome page'
+      'Test 2 Failed: Entered password is not displayed on welcome page'
     );
 
-    console.log('✅ Test 3 (Valid password & Welcome page) passed');
+    console.log('✅ Test 2 (Valid password & Welcome page) passed');
 
-    // Test 4: Logout from welcome page
+    // Test 3: Logout from welcome page
     console.log('→ Testing logout functionality');
     const logoutButton = await driver.wait(
       until.elementLocated(By.css('form[action="/"] button[type="submit"]')),
@@ -144,16 +115,16 @@ console.log(`Server URL: ${serverUrl}`);
     );
     assert.ok(
       await loginForm.isDisplayed(),
-      'Test 4 Failed: Expected to return to login page by finding the login form.'
+      'Test 3 Failed: Expected to return to login page by finding the login form.'
     );
     const title = await driver.getTitle();
     assert.strictEqual(
       title,
       'Login and Search',
-      'Test 4 Failed: Incorrect page title after logout.'
+      'Test 3 Failed: Incorrect page title after logout.'
     );
 
-    console.log('✅ Test 4 (Logout) passed');
+    console.log('✅ Test 3 (Logout) passed');
     console.log('--- All Password Validation Tests Completed Successfully! ---');
   } catch (err) {
     console.error('❌ One or more password tests failed:', err);
@@ -224,13 +195,13 @@ console.log(`Server URL: ${serverUrl}`);
       'Test 2 Failed: Did not return to the correct home page title.'
     );
 
-    // **FIX APPLIED**: This check is now more robust. It explicitly checks if the
-    // current URL is one of the two valid root URLs, which handles the case
-    // where the URL ends with '/?'.
     const currentUrl = await driver.getCurrentUrl();
-    const isRootUrl =
-      currentUrl === `${serverUrl}/` || currentUrl === `${serverUrl}/?`;
-    assert.ok(isRootUrl, `Test 2 Failed: URL should be the root. Got: ${currentUrl}`);
+    const parsedUrl = new URL(currentUrl);
+    assert.strictEqual(
+      parsedUrl.pathname,
+      '/',
+      `Test 2 Failed: URL path should be the root '/'. Got: ${parsedUrl.pathname}`
+    );
     console.log('✅ Test 2 (Return from results) passed');
 
     // Test 3: XSS attack attempt
@@ -294,7 +265,6 @@ console.log(`Server URL: ${serverUrl}`);
   }
 })();
 
-
 (async function testTimestampPage() {
   const driver = await new Builder()
     .forBrowser('chrome')
@@ -322,6 +292,7 @@ console.log(`Server URL: ${serverUrl}`);
     console.log('✅ Timestamp format is valid.');
   } catch (err) {
     console.error('❌ Timestamp page test failed:', err);
+    process.exit(1);
   } finally {
     await driver.quit();
   }

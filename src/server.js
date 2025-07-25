@@ -1,5 +1,4 @@
 import express from 'express';
-import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -11,29 +10,7 @@ const __dirname = path.dirname(__filename);
 
 app.use(express.urlencoded({ extended: true }));
 
-let commonPasswords = new Set();
-const COMMON_PASSWORDS_FILE = path.join(
-  __dirname,
-  '10-million-password-list-top-1000.txt'
-);
-
-async function loadCommonPasswords() {
-  try {
-    const data = await fs.readFile(COMMON_PASSWORDS_FILE, 'utf8');
-    data.split('\n').forEach((password) => {
-      const trimmedPassword = password.trim();
-      if (trimmedPassword) {
-        commonPasswords.add(trimmedPassword);
-      }
-    });
-    console.log(
-      `Loaded ${commonPasswords.size} common passwords from ${COMMON_PASSWORDS_FILE}`
-    );
-  } catch (err) {
-    console.error(`Error loading common passwords file: ${err.message}`);
-    process.exit(1);
-  }
-}
+// REMOVED: The commonPasswords set and file loading logic are gone.
 
 function verifyPassword(password) {
   const minLength = 12;
@@ -60,11 +37,7 @@ function verifyPassword(password) {
     );
   }
 
-  if (commonPasswords.has(password)) {
-    feedback.push(
-      'Password is too common or has been previously compromised. Please choose a different one.'
-    );
-  }
+  // REMOVED: The check against the common passwords list is gone.
 
   const isValid = feedback.length === 0;
 
@@ -84,7 +57,6 @@ export function verifySearchTerm(term) {
     return { isValid: false, attackType: 'xss' };
   }
 
-  // **FIXED**: Split SQL injection check into two more specific patterns.
   // Pattern for SQL keywords that should be whole words.
   const sqlKeywordPattern = /\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION)\b/i;
   // Pattern for SQL comment/terminator characters that can be anywhere.
@@ -273,8 +245,8 @@ app.get('/browser-info', (req, res) => {
   `);
 });
 
-const server = app.listen(PORT, '0.0.0.0', async () => {
-  await loadCommonPasswords();
+const server = app.listen(PORT, '0.0.0.0', () => {
+  // REMOVED: No longer need to load passwords on startup.
   console.log(`Server is running on http://localhost:${PORT}`);
 });
 
