@@ -4,8 +4,9 @@ services:
   sonarqube:
     image: sonarqube:community
     container_name: sonarqube
+    # bind host port 9000 only on localhost
     ports:
-      - "9000:9000"
+      - "127.0.0.1:9000:9000"
     environment:
       SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
     volumes:
